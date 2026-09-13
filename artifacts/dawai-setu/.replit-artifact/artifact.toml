@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Dawai Setu"
+description = "A live regional healthcare supply coordination website that helps facilities spot medicine shortages, find nearby surplus stock, and coordinate safe transfers."
+version = "1.0.0"
+id = "artifacts/dawai-setu"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19809
+
+[services.development]
+run = "pnpm --filter @workspace/dawai-setu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/dawai-setu", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/dawai-setu/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19809"
+BASE_PATH = "/"

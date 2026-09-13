@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Regional medicine supply coordination API for Udupi, Manipal, and Mangalore.
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: supply
+    description: Medicines, facilities, stock, and alerts
+  - name: transfers
+    description: Transfer requests between facilities
+  - name: notifications
+    description: Facility notifications
+  - name: delivery
+    description: Delivery provider status
 paths:
   /healthz:
     get:
@@ -24,13 +32,455 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [supply]
+      summary: Get the manager dashboard
+      parameters:
+        - $ref: "#/components/parameters/FacilityId"
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /facilities:
+    get:
+      operationId: listFacilities
+      tags: [supply]
+      summary: List facilities in the regional network
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [hospital, clinic, pharmacy, distributor]
+        - name: city
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Facilities
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Facility" }
+  /medicines:
+    get:
+      operationId: listMedicines
+      tags: [supply]
+      summary: Search the medicine catalog
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Medicines
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Medicine" }
+  /inventory:
+    get:
+      operationId: listInventory
+      tags: [supply]
+      summary: List stock held by a facility
+      parameters:
+        - $ref: "#/components/parameters/FacilityId"
+        - name: medicineId
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: riskOnly
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Inventory rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/InventoryRow" }
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [supply]
+      summary: List shortage and expiry alerts
+      parameters:
+        - $ref: "#/components/parameters/FacilityId"
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, high, watch, all]
+            default: all
+      responses:
+        "200":
+          description: Alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Alert" }
+  /nearby-suppliers:
+    get:
+      operationId: listNearbySuppliers
+      tags: [supply]
+      summary: Rank nearby facilities with usable medicine surplus
+      parameters:
+        - $ref: "#/components/parameters/FacilityId"
+        - name: medicineId
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: quantity
+          in: query
+          schema: { type: integer, minimum: 1, default: 100 }
+      responses:
+        "200":
+          description: Ranked nearby sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SupplierMatch" }
+  /transfer-requests:
+    get:
+      operationId: listTransferRequests
+      tags: [transfers]
+      summary: List transfer requests for a facility
+      parameters:
+        - $ref: "#/components/parameters/FacilityId"
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [incoming, outgoing, all]
+            default: all
+      responses:
+        "200":
+          description: Transfer requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TransferRequest" }
+    post:
+      operationId: createTransferRequest
+      tags: [transfers]
+      summary: Request medicine from a nearby facility
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequestInput"
+      responses:
+        "201":
+          description: Transfer request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferRequest"
+  /transfer-requests/{id}:
+    patch:
+      operationId: updateTransferRequest
+      tags: [transfers]
+      summary: Accept or reject a transfer request
+      parameters:
+        - $ref: "#/components/parameters/TransferId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferRequestUpdate"
+      responses:
+        "200":
+          description: Updated transfer request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferRequest"
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for a facility
+      parameters:
+        - $ref: "#/components/parameters/FacilityId"
+        - name: unreadOnly
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Notification" }
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - $ref: "#/components/parameters/NotificationId"
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+  /blood-bank:
+    get:
+      operationId: listBloodBankAvailability
+      tags: [supply]
+      summary: List blood group availability across nearby hospitals and labs
+      parameters:
+        - name: group
+          in: query
+          schema:
+            type: string
+            enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: query
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Blood bank availability records
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BloodBankRecord" }
+  /delivery/status:
+    get:
+      operationId: getDeliveryStatus
+      tags: [delivery]
+      summary: Return delivery provider configuration status
+      responses:
+        "200":
+          description: Delivery status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryStatus"
 components:
+  parameters:
+    FacilityId:
+      name: facilityId
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    TransferId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    NotificationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
   schemas:
     HealthStatus:
       type: object
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        status: { type: string }
+      required: [status]
+    Facility:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        name: { type: string }
+        type: { type: string, enum: [hospital, clinic, pharmacy, distributor] }
+        city: { type: string }
+        district: { type: string }
+        address: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        contactName: { type: string }
+        contactPhone: { type: string }
+        isActive: { type: boolean }
+        lastSyncAt: { type: string, format: date-time }
+      required: [id, code, name, type, city, district, address, latitude, longitude, contactName, contactPhone, isActive, lastSyncAt]
+    Medicine:
+      type: object
+      properties:
+        id: { type: integer }
+        genericName: { type: string }
+        brandName: { type: string }
+        strength: { type: string }
+        form: { type: string }
+        unit: { type: string }
+        category: { type: string }
+        reorderLevel: { type: integer }
+      required: [id, genericName, brandName, strength, form, unit, category, reorderLevel]
+    InventoryRow:
+      type: object
+      properties:
+        id: { type: integer }
+        facilityId: { type: integer }
+        facilityName: { type: string }
+        medicineId: { type: integer }
+        medicineName: { type: string }
+        strength: { type: string }
+        form: { type: string }
+        unit: { type: string }
+        batchNumber: { type: string }
+        quantityOnHand: { type: integer }
+        reservedQuantity: { type: integer }
+        availableQuantity: { type: integer }
+        expiryDate: { type: string, format: date }
+        daysToExpiry: { type: integer }
+        daysOfCover: { type: number }
+        dailyConsumption: { type: number }
+        risk: { type: string, enum: [critical, high, watch, stable] }
+        lastCountedAt: { type: string, format: date-time }
+      required: [id, facilityId, facilityName, medicineId, medicineName, strength, form, unit, batchNumber, quantityOnHand, reservedQuantity, availableQuantity, expiryDate, daysToExpiry, daysOfCover, dailyConsumption, risk, lastCountedAt]
+    Alert:
+      type: object
+      properties:
+        id: { type: integer }
+        facilityId: { type: integer }
+        facilityName: { type: string }
+        medicineId: { type: integer }
+        medicineName: { type: string }
+        severity: { type: string, enum: [critical, high, watch] }
+        title: { type: string }
+        detail: { type: string }
+        daysOfCover: { type: number }
+        distanceKm: { type: number }
+        recommendedSupplierId: { type: integer, nullable: true }
+        recommendedSupplierName: { type: string, nullable: true }
+        recommendedQuantity: { type: integer, nullable: true }
+        confidence: { type: string, enum: [high, medium, low] }
+        createdAt: { type: string, format: date-time }
+      required: [id, facilityId, facilityName, medicineId, medicineName, severity, title, detail, daysOfCover, distanceKm, confidence, createdAt]
+    SupplierMatch:
+      type: object
+      properties:
+        facility: { $ref: "#/components/schemas/Facility" }
+        medicine: { $ref: "#/components/schemas/Medicine" }
+        availableQuantity: { type: integer }
+        surplusQuantity: { type: integer }
+        nearestExpiryDate: { type: string, format: date }
+        daysToExpiry: { type: integer }
+        distanceKm: { type: number }
+        estimatedMinutes: { type: integer }
+        matchScore: { type: number }
+        recommendation: { type: string, enum: [recommended, good, fallback] }
+      required: [facility, medicine, availableQuantity, surplusQuantity, nearestExpiryDate, daysToExpiry, distanceKm, estimatedMinutes, matchScore, recommendation]
+    TransferRequestInput:
+      type: object
+      properties:
+        requesterFacilityId: { type: integer, minimum: 1 }
+        supplierFacilityId: { type: integer, minimum: 1 }
+        medicineId: { type: integer, minimum: 1 }
+        quantity: { type: integer, minimum: 1 }
+        note: { type: string }
+      required: [requesterFacilityId, supplierFacilityId, medicineId, quantity]
+    TransferRequestUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [accepted, rejected] }
+      required: [status]
+    TransferRequest:
+      type: object
+      properties:
+        id: { type: integer }
+        requesterFacilityId: { type: integer }
+        requesterFacilityName: { type: string }
+        supplierFacilityId: { type: integer }
+        supplierFacilityName: { type: string }
+        medicineId: { type: integer }
+        medicineName: { type: string }
+        medicineStrength: { type: string }
+        quantity: { type: integer }
+        status: { type: string, enum: [pending, accepted, rejected] }
+        note: { type: string, nullable: true }
+        deliveryStatus: { type: string, enum: [not_configured, awaiting_dispatch, dispatched] }
+        createdAt: { type: string, format: date-time }
+        respondedAt: { type: string, format: date-time, nullable: true }
+      required: [id, requesterFacilityId, requesterFacilityName, supplierFacilityId, supplierFacilityName, medicineId, medicineName, medicineStrength, quantity, status, deliveryStatus, createdAt]
+    Notification:
+      type: object
+      properties:
+        id: { type: integer }
+        facilityId: { type: integer }
+        transferRequestId: { type: integer, nullable: true }
+        type: { type: string, enum: [transfer_request, transfer_accepted, transfer_rejected, stock_alert, system] }
+        title: { type: string }
+        body: { type: string }
+        isRead: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required: [id, facilityId, type, title, body, isRead, createdAt]
+    BloodBankRecord:
+      type: object
+      properties:
+        id: { type: string }
+        facilityName: { type: string }
+        facilityType: { type: string, enum: [hospital, lab] }
+        city: { type: string }
+        address: { type: string }
+        contactName: { type: string }
+        contactPhone: { type: string }
+        bloodGroup: { type: string, enum: [A+, A-, B+, B-, AB+, AB-, O+, O-] }
+        units: { type: integer }
+        distanceKm: { type: number }
+        status: { type: string, enum: [surplus, available, low] }
+        lastUpdated: { type: string, format: date-time }
+      required: [id, facilityName, facilityType, city, address, contactName, contactPhone, bloodGroup, units, distanceKm, status, lastUpdated]
+    Dashboard:
+      type: object
+      properties:
+        facility: { $ref: "#/components/schemas/Facility" }
+        summary:
+          type: object
+          properties:
+            criticalAlerts: { type: integer }
+            watchAlerts: { type: integer }
+            inventoryLines: { type: integer }
+            pendingTransfers: { type: integer }
+            unreadNotifications: { type: integer }
+          required: [criticalAlerts, watchAlerts, inventoryLines, pendingTransfers, unreadNotifications]
+        alerts:
+          type: array
+          items: { $ref: "#/components/schemas/Alert" }
+        inventory:
+          type: array
+          items: { $ref: "#/components/schemas/InventoryRow" }
+        transfers:
+          type: array
+          items: { $ref: "#/components/schemas/TransferRequest" }
+        notifications:
+          type: array
+          items: { $ref: "#/components/schemas/Notification" }
+      required: [facility, summary, alerts, inventory, transfers, notifications]
+    DeliveryStatus:
+      type: object
+      properties:
+        provider: { type: string, enum: [swiggy_genie] }
+        status: { type: string, enum: [not_configured, ready] }
+        message: { type: string }
+      required: [provider, status, message]

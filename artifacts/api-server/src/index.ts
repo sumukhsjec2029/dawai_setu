@@ -15,6 +15,9 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+// Seed data is NOT auto-loaded in production.
+// Run `pnpm seed` to populate demo data when needed.
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");

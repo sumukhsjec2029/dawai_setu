@@ -1,5 +1,5 @@
 {
   "buildCommand": "pnpm --filter @workspace/dawai-setu run build",
   "outputDirectory": "artifacts/dawai-setu/dist",
-  "installCommand": "npm install -g pnpm@9.1.0 && pnpm install"
+  "installCommand": "npm install -g pnpm@latest && pnpm install"
 }

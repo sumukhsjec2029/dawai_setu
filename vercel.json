@@ -1,5 +1,6 @@
 {
-  "buildCommand": "pnpm --filter @workspace/dawai-setu run build",
+  "buildCommand": "cd artifacts/dawai-setu && npx vite build",
   "outputDirectory": "artifacts/dawai-setu/dist",
-  "installCommand": "npm install -g pnpm@latest && pnpm install"
+  "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
+  "framework": null
 }

@@ -280,13 +280,13 @@ export async function ensureSeedData() {
   stats.alerts = alertValues.length;
 
   // Phase 6: Report
-  logger.info(\`Seed complete:
-- Facilities: \${stats.facilities}
-- Medicines: \${stats.medicines}
-- Inventory records: \${stats.inventory}
-- Demand history records: \${stats.demand}
-- Replenishment records: \${stats.replenishment}
-- Alert history records: \${stats.alerts}
-- Shortage scenarios: \${stats.shortages}
-- Regional risk scenarios: \${stats.risks}\`);
+  logger.info(`Seed complete:
+- Facilities: ${stats.facilities}
+- Medicines: ${stats.medicines}
+- Inventory records: ${stats.inventory}
+- Demand history records: ${stats.demand}
+- Replenishment records: ${stats.replenishment}
+- Alert history records: ${stats.alerts}
+- Shortage scenarios: ${stats.shortages}
+- Regional risk scenarios: ${stats.risks}`);
 }

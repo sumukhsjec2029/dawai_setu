@@ -26,7 +26,14 @@ import {
   type TransferRequest,
 } from '@workspace/api-client-react';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 6, // Render free tier can take ~50s to cold start. 6 retries * 10s = 60s
+      retryDelay: 10000,
+    },
+  },
+});
 const FACILITY_ID = 1;
 const POLL = 15000;
 
